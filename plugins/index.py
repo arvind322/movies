@@ -128,7 +128,27 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot, skip):
                     media.caption = message.caption or ""
                     status = await save_file(media)
                 elif message.text:
-                    status = await save_file(message)
+                    try:
+                        chat_username = message.chat.username
+                        if not chat_username:
+                            chat_username = (await bot.get_chat(chat)).username
+                        message_link = f"https://t.me/{chat_username}/{message.message_id}"
+                    except:
+                        message_link = str(message.message_id)
+
+                    caption_text = message.text.strip()
+                    file_name = caption_text.split('\n')[0][:50] if caption_text else "No Name"
+
+                    class FakeMedia:
+                        file_id = message_link
+                        file_ref = None
+                        file_name = file_name
+                        file_size = 0
+                        mime_type = None
+                        caption = caption_text
+                        file_type = "text"
+
+                    status = await save_file(FakeMedia())
                 else:
                     no_media += 1
                     continue
@@ -150,4 +170,4 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-)
+            )
