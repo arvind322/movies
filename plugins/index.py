@@ -117,7 +117,8 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
 
     async with lock:
         try:
-            async for message in bot.iter_messages(chat_id, limit=last_msg_id, reverse=True, offset_id=0):
+            # Updated iter_messages usage: removed reverse, added offset_id and large limit
+            async for message in bot.iter_messages(chat_id, offset_id=last_msg_id, limit=10000):
                 if current > 0:
                     current -= 1
                     continue
@@ -179,4 +180,4 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-            )
+                              )
