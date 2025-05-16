@@ -124,19 +124,11 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot, skip):
                 elif message.video:
                     media = message.video
 
-                forward_info = None
-                if message.forward_from_chat:
-                    forward_info = {
-                        "from_chat_id": message.forward_from_chat.id,
-                        "from_chat_username": message.forward_from_chat.username,
-                        "from_chat_title": message.forward_from_chat.title
-                    }
-
                 if media:
                     media.caption = message.caption or ""
-                    status = await save_file(media, forward_info)
+                    status = await save_file(media)
                 elif message.text:
-                    status = await save_file(message, forward_info)
+                    status = await save_file(message)
                 else:
                     no_media += 1
                     continue
@@ -158,4 +150,4 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-            )
+)
