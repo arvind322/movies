@@ -12,7 +12,6 @@ client = AsyncIOMotorClient(DATABASE_URI)
 mydb = client[DATABASE_NAME]
 instance = Instance.from_db(mydb)
 
-
 @instance.register
 class Media(Document):
     file_id = fields.StrField(attribute='_id')
@@ -27,55 +26,42 @@ class Media(Document):
         indexes = ('$file_name', )
         collection_name = COLLECTION_NAME
 
-
-def unpack_new_file_id(file_id_str):
-    """
-    Converts file_id string to a tuple of (file_id, file_ref).
-    This function uses Pyrogram's FileId parser.
-    """
-    try:
-        file_id_obj = FileId.decode(file_id_str)
-        file_id = file_id_obj.file_id
-        file_ref = file_id_obj.file_ref
-        return file_id, file_ref
-    except Exception as e:
-        logging.error(f"Failed to unpack file_id: {e}")
-        # fallback - return original file_id string, None as ref
-        return file_id_str, None
-
-
 async def get_files_db_size():
     return (await mydb.command("dbstats"))['dataSize']
 
-
 async def save_file(media):
-    """Save file in database"""
+    """Save file or text-only post in database"""
 
-    file_id, file_ref = unpack_new_file_id(media.file_id)
-    file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
+    file_id = getattr(media, "file_id", None)
+    file_ref = None
+    file_name = re.sub(r"(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "No Name")))
+    file_size = getattr(media, "file_size", 0)
+    mime_type = getattr(media, "mime_type", None)
+    caption = media.caption.html if getattr(media, "caption", None) else None
+    file_type = mime_type.split('/')[0] if mime_type else "text"
+
     try:
         file = Media(
-            file_id=file_id,
+            file_id=file_id or file_name,
             file_ref=file_ref,
             file_name=file_name,
-            file_size=media.file_size,
-            mime_type=media.mime_type,
-            caption=media.caption.html if media.caption else None,
-            file_type=media.mime_type.split('/')[0] if media.mime_type else None
+            file_size=file_size,
+            mime_type=mime_type,
+            caption=caption,
+            file_type=file_type
         )
     except ValidationError:
-        logging.error('Error occurred while saving file in database')
+        print('Error occurred while saving file/post in database')
         return 'err'
     else:
         try:
             await file.commit()
-        except DuplicateKeyError:
-            logging.info(f'{getattr(media, "file_name", "NO_FILE")} is already saved in database')
+        except DuplicateKeyError:      
+            print(f'{file_name} is already saved in database') 
             return 'dup'
         else:
-            logging.info(f'{getattr(media, "file_name", "NO_FILE")} is saved to database')
+            print(f'{file_name} is saved to database')
             return 'suc'
-
 
 async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     query = query.strip()
@@ -84,10 +70,10 @@ async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     elif ' ' not in query:
         raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
     else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
+        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]') 
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except Exception:
+    except:
         regex = query
     filter = {'file_name': regex}
     cursor = Media.find(filter)
@@ -105,9 +91,8 @@ async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     total_results = await Media.count_documents(filter)
     next_offset = offset + max_results
     if next_offset >= total_results:
-        next_offset = ''
+        next_offset = ''       
     return files, next_offset, total_results
-
 
 async def get_bad_files(query, file_type=None, offset=0, filter=False):
     query = query.strip()
@@ -119,7 +104,7 @@ async def get_bad_files(query, file_type=None, offset=0, filter=False):
         raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except Exception:
+    except:
         return []
     filter = {'file_name': regex}
     if file_type:
@@ -130,13 +115,11 @@ async def get_bad_files(query, file_type=None, offset=0, filter=False):
     files = await cursor.to_list(length=total_results)
     return files, total_results
 
-
 async def get_file_details(query):
     filter = {'file_id': query}
     cursor = Media.find(filter)
     filedetails = await cursor.to_list(length=1)
     return filedetails
-
 
 def encode_file_id(s: bytes) -> str:
     r = b""
@@ -150,7 +133,6 @@ def encode_file_id(s: bytes) -> str:
                 n = 0
             r += bytes([i])
     return base64.urlsafe_b64encode(r).decode().rstrip("=")
-
 
 def encode_file_ref(file_ref: bytes) -> str:
     return base64.urlsafe_b64encode(file_ref).decode().rstrip("=")
