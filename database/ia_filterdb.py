@@ -32,15 +32,34 @@ async def get_files_db_size():
 async def save_file(media):
     file_id = getattr(media, "file_id", None)
     file_ref = None
-    file_name = re.sub(r"(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "No Name")))
+
+    # Caption text
+    caption = media.caption.html if getattr(media, "caption", None) else None
+    plain_caption = media.caption.text if getattr(media, "caption", None) else None
+
+    # File name
+    if hasattr(media, "file_name") and media.file_name:
+        file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
+    elif plain_caption:
+        file_name = plain_caption.strip().split("\n")[0][:100]
+    else:
+        file_name = "No Name"
+
+    # Fallback for post-only file_id
+    if not file_id:
+        try:
+            chat_id = media.chat.username if media.chat.username else f"c/{str(media.chat.id)[4:]}"
+            file_id = f"https://t.me/{chat_id}/{media.id}"
+        except:
+            file_id = file_name
+
     file_size = getattr(media, "file_size", 0)
     mime_type = getattr(media, "mime_type", None)
-    caption = media.caption.html if getattr(media, "caption", None) else None
     file_type = mime_type.split('/')[0] if mime_type else "text"
 
     try:
         file = Media(
-            file_id=file_id or file_name,
+            file_id=file_id,
             file_ref=file_ref,
             file_name=file_name,
             file_size=file_size,
@@ -54,8 +73,8 @@ async def save_file(media):
     else:
         try:
             await file.commit()
-        except DuplicateKeyError:      
-            print(f'{file_name} is already saved in database') 
+        except DuplicateKeyError:
+            print(f'{file_name} is already saved in database')
             return 'dup'
         else:
             print(f'{file_name} is saved to database')
@@ -89,7 +108,7 @@ async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     total_results = await Media.count_documents(filter)
     next_offset = offset + max_results
     if next_offset >= total_results:
-        next_offset = ''       
+        next_offset = ''
     return files, next_offset, total_results
 
 async def get_bad_files(query, file_type=None, offset=0, filter=False):
