@@ -114,15 +114,12 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
     start_time = time.time()
     total_files = duplicate = errors = deleted = no_media = unsupported = 0
     current = 0
-    offset_id = last_msg_id + 1  # Start from last_msg_id + 1 to go backward
+    offset_id = last_msg_id + 1
 
     async with lock:
         try:
             while True:
-                async for message in bot.iter_messages(chat_id, offset_id=offset_id, limit=100):
-                    # iter_messages with offset_id gets messages **less than** offset_id
-                    # So messages come in descending order by message_id
-
+                async for message in bot.iter_messages(chat_id, offset_id, 100):  # Positional arguments used
                     if current < skip:
                         current += 1
                         continue
@@ -143,7 +140,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                         await asyncio.sleep(1)
 
                     current += 1
-                    offset_id = message.message_id  # Prepare for next batch
+                    offset_id = message.message_id
 
                     if message.empty:
                         deleted += 1
@@ -177,11 +174,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                     else:
                         unsupported += 1
 
-                # If less than 100 messages were received, no more messages left
-                if current >= last_msg_id:
-                    break
-                # If no messages fetched in this iteration
-                if offset_id == 0 or offset_id == 1:
+                if current >= last_msg_id or offset_id <= 1:
                     break
 
         except FloodWait as e:
