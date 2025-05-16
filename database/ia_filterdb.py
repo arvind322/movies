@@ -1,7 +1,7 @@
 import logging
 import re
 import base64
-from pyrogram.file_id import FileId
+from pyrogram.file_id import FileId, unpack
 from pymongo.errors import DuplicateKeyError
 from umongo import Instance, Document, fields
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -30,8 +30,6 @@ async def get_files_db_size():
     return (await mydb.command("dbstats"))['dataSize']
 
 async def save_file(media):
-    """Save file or text-only post in database"""
-
     file_id = getattr(media, "file_id", None)
     file_ref = None
     file_name = re.sub(r"(_|\-|\.|\+)", " ", str(getattr(media, "file_name", "No Name")))
@@ -70,7 +68,7 @@ async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     elif ' ' not in query:
         raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
     else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]') 
+        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
     except:
@@ -136,3 +134,6 @@ def encode_file_id(s: bytes) -> str:
 
 def encode_file_ref(file_ref: bytes) -> str:
     return base64.urlsafe_b64encode(file_ref).decode().rstrip("=")
+
+def unpack_new_file_id(file_id: str) -> FileId:
+    return unpack(file_id)
