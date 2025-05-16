@@ -119,7 +119,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
     async with lock:
         try:
             while True:
-                async for message in bot.iter_messages(chat_id, offset_id, 100):  # Positional arguments used
+                async for message in bot.iter_messages(chat_id, offset_id=offset_id, limit=100):
                     if current < skip:
                         current += 1
                         continue
@@ -140,7 +140,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                         await asyncio.sleep(1)
 
                     current += 1
-                    offset_id = message.message_id
+                    offset_id = message.id  # fixed line
 
                     if message.empty:
                         deleted += 1
@@ -154,9 +154,9 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                     elif message.text:
                         try:
                             username = message.chat.username or (await bot.get_chat(chat_id)).username
-                            link = f"https://t.me/{username}/{message.message_id}" if username else str(message.message_id)
+                            link = f"https://t.me/{username}/{message.id}" if username else str(message.id)
                         except:
-                            link = str(message.message_id)
+                            link = str(message.id)
 
                         caption = message.text.strip()
                         name = caption.split('\n')[0][:50] if caption else "No Name"
@@ -185,4 +185,4 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-    )
+                    )
