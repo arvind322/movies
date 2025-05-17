@@ -119,7 +119,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
     async with lock:
         try:
             while True:
-                async for message in bot.iter_messages(chat_id, offset_id=offset_id, limit=100):
+                async for message in bot.get_chat_history(chat_id, offset_id=offset_id, limit=100):
                     if current < skip:
                         current += 1
                         continue
@@ -140,7 +140,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                         await asyncio.sleep(1)
 
                     current += 1
-                    offset_id = message.id  # fixed line
+                    offset_id = message.id
 
                     if message.empty:
                         deleted += 1
@@ -185,4 +185,4 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-                    )
+    )
