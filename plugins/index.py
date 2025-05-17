@@ -3,18 +3,19 @@ import time
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.sessions import StringSession
+
 from info import ADMINS, CHANNELS
 from database.ia_filterdb import save_file
 from utils import temp, get_readable_time
 
 lock = asyncio.Lock()
 
-# Session string वाला क्लाइंट
+# सही तरीका: Session string के लिए StringSession का इस्तेमाल करें
 app = Client(
-    session_name="your_session",  # कुछ भी नाम दे सकते हो
+    session=StringSession("BQG2HWgAPvadf8yFJ9XFfSw1wOzIpICio7p249LgOy..."),  # अपना असली session string डालें
     api_id=28712296,
-    api_hash="25a96a55e729c600c0116f38564a635f",
-    session_string="BQG2HWgAPvadf8yFJ9XFfSw1wOzIpICio7p249LgOy..."  # आपका session string
+    api_hash="25a96a55e729c600c0116f38564a635f"
 )
 
 class FakeMedia:
@@ -26,7 +27,6 @@ class FakeMedia:
         self.mime_type = None
         self.caption = caption
         self.file_type = "text"
-
 
 @app.on_callback_query(filters.regex(r'^index'))
 async def index_files(bot, query):
@@ -44,7 +44,6 @@ async def index_files(bot, query):
     elif ident == 'cancel':
         temp.CANCEL = True
         await query.message.edit("Trying to cancel Indexing...")
-
 
 @app.on_message(filters.command('index') & filters.private & filters.user(ADMINS))
 async def send_for_index(bot, message):
@@ -85,6 +84,7 @@ async def send_for_index(bot, message):
         skip_msg = await bot.listen(chat_id=message.chat.id, user_id=message.from_user.id)
     finally:
         await s.delete()
+
     try:
         skip = int(skip_msg.text)
     except:
@@ -99,7 +99,6 @@ async def send_for_index(bot, message):
         f'Do you want to index <b>{chat.title}</b>?\nTotal Messages: <code>{last_msg_id}</code>',
         reply_markup=reply_markup
     )
-
 
 @app.on_message(filters.command('channel'))
 async def channel_info(bot, message):
@@ -118,7 +117,6 @@ async def channel_info(bot, message):
             text += f'Unknown Channel ({cid})\n'
     text += f'\n**Total:** {len(CHANNELS)}'
     await message.reply(text)
-
 
 async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
     start_time = time.time()
@@ -200,7 +198,6 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
             )
-
 
 if __name__ == "__main__":
     app.run()
