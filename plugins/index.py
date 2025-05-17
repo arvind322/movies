@@ -9,6 +9,8 @@ from utils import temp, get_readable_time
 
 lock = asyncio.Lock()
 
+app = Client("lucas", api_id=28712296, api_hash="25a96a55e729c600c0116f38564a635f")
+
 class FakeMedia:
     def __init__(self, file_id, file_name, caption):
         self.file_id = file_id
@@ -19,7 +21,7 @@ class FakeMedia:
         self.caption = caption
         self.file_type = "text"
 
-@Client.on_callback_query(filters.regex(r'^index'))
+@app.on_callback_query(filters.regex(r'^index'))
 async def index_files(bot, query):
     _, ident, chat_id, last_msg_id, skip = query.data.split("#")
     if ident == 'yes':
@@ -36,7 +38,7 @@ async def index_files(bot, query):
         temp.CANCEL = True
         await query.message.edit("Trying to cancel Indexing...")
 
-@Client.on_message(filters.command('index') & filters.private & filters.user(ADMINS))
+@app.on_message(filters.command('index') & filters.private & filters.user(ADMINS))
 async def send_for_index(bot, message):
     if lock.locked():
         return await message.reply('Wait until previous process completes.')
@@ -86,11 +88,12 @@ async def send_for_index(bot, message):
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
     await message.reply(
-        f'Do you want to index <b>{chat.title}</b>?\nTotal Messages: <code>{last_msg_id}</code>',
+        f'Do you want to index <b>{chat.title}</b>?
+Total Messages: <code>{last_msg_id}</code>',
         reply_markup=reply_markup
     )
 
-@Client.on_message(filters.command('channel'))
+@app.on_message(filters.command('channel'))
 async def channel_info(bot, message):
     if message.from_user.id not in ADMINS:
         return await message.reply('Only bot owner can use this command.')
@@ -186,5 +189,7 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
         else:
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
-                f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-        )
+                f'âœ… Indexing Complete!\nâ± Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
+            )
+
+app.run()
