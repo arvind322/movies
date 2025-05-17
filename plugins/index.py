@@ -9,7 +9,6 @@ from utils import temp, get_readable_time
 
 lock = asyncio.Lock()
 
-
 class FakeMedia:
     def __init__(self, file_id, file_name, caption):
         self.file_id = file_id
@@ -19,7 +18,6 @@ class FakeMedia:
         self.mime_type = None
         self.caption = caption
         self.file_type = "text"
-
 
 @Client.on_callback_query(filters.regex(r'^index'))
 async def index_files(bot, query):
@@ -37,7 +35,6 @@ async def index_files(bot, query):
     elif ident == 'cancel':
         temp.CANCEL = True
         await query.message.edit("Trying to cancel Indexing...")
-
 
 @Client.on_message(filters.command('index') & filters.private & filters.user(ADMINS))
 async def send_for_index(bot, message):
@@ -88,8 +85,10 @@ async def send_for_index(bot, message):
         [InlineKeyboardButton('CLOSE', callback_data='close_data')]
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
-    await message.reply(f'Do you want to index <b>{chat.title}</b>?\nTotal Messages: <code>{last_msg_id}</code>', reply_markup=reply_markup)
-
+    await message.reply(
+        f'Do you want to index <b>{chat.title}</b>?\nTotal Messages: <code>{last_msg_id}</code>',
+        reply_markup=reply_markup
+    )
 
 @Client.on_message(filters.command('channel'))
 async def channel_info(bot, message):
@@ -108,7 +107,6 @@ async def channel_info(bot, message):
             text += f'Unknown Channel ({cid})\n'
     text += f'\n**Total:** {len(CHANNELS)}'
     await message.reply(text)
-
 
 async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
     start_time = time.time()
@@ -147,10 +145,15 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                         continue
 
                     media = message.photo or message.document or message.video
+                    caption = message.caption or ""
 
                     if media:
-                        media.caption = message.caption or ""
-                        status = await save_file(media)
+                        media_msg = FakeMedia(
+                            file_id=media.file_id,
+                            file_name=getattr(media, "file_name", "No Name"),
+                            caption=caption
+                        )
+                        status = await save_file(media_msg)
                     elif message.text:
                         try:
                             username = message.chat.username or (await bot.get_chat(chat_id)).username
@@ -158,9 +161,8 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
                         except:
                             link = str(message.id)
 
-                        caption = message.text.strip()
-                        name = caption.split('\n')[0][:50] if caption else "No Name"
-                        status = await save_file(FakeMedia(link, name, caption))
+                        name = message.text.strip().split('\n')[0][:50] if message.text else "No Name"
+                        status = await save_file(FakeMedia(link, name, message.text.strip()))
                     else:
                         no_media += 1
                         continue
@@ -185,4 +187,4 @@ async def index_files_to_db(last_msg_id, chat_id, msg, bot, skip):
             time_taken = get_readable_time(time.time() - start_time)
             await msg.edit(
                 f'✅ Indexing Complete!\n⏱ Time: {time_taken}\nSaved: <code>{total_files}</code>\nDuplicates: <code>{duplicate}</code>\nDeleted: <code>{deleted}</code>\nNo Media: <code>{no_media + unsupported}</code>\nErrors: <code>{errors}</code>'
-    )
+        )
