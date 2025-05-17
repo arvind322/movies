@@ -88,7 +88,7 @@ async def send_for_index(bot, message):
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
     await message.reply(
-        f'Do you want to index <b>{chat.title}</b>?
+        f'Do you want to index <b>{chat.title}</b>?'
 Total Messages: <code>{last_msg_id}</code>',
         reply_markup=reply_markup
     )
